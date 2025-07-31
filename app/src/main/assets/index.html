@@ -473,6 +473,14 @@
             }
         });
 
+        window.onSaveComplete = function(success) {
+            if (success) {
+                message.textContent = "Image saved successfully.";
+            } else {
+                message.textContent = "Failed to save image.";
+            }
+        };
+        
         // --- Progressive Resize Function (Best Quality) ---
         async function progressiveResize(img, targetW, targetH) {
             let tmpCanvas = document.createElement('canvas');
