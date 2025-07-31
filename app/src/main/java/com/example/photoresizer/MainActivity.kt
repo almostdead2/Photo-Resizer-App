@@ -22,11 +22,17 @@ class MainActivity : AppCompatActivity() {
 
         val webView = WebView(this)
 
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.allowFileAccess = true
-        settings.domStorageEnabled = true
-        settings.allowContentAccess = true
+        with(webView.settings) {
+            javaScriptEnabled = true
+            allowFileAccess = true           // Required for local asset/image loading
+            allowContentAccess = true        // Needed for content:// access
+            domStorageEnabled = true
+            setSupportZoom(false)
+            displayZoomControls = false
+            mediaPlaybackRequiresUserGesture = true
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -47,9 +53,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true // Block all external links
+        }
 
-        // JS to Android interface for saving images
         webView.addJavascriptInterface(Saver(this), "AndroidSaver")
 
         webView.loadUrl("file:///android_asset/index.html")
