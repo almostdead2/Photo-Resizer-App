@@ -76,9 +76,14 @@ class MainActivity : AppCompatActivity() {
                 val fileName = "resized_${System.currentTimeMillis()}.$ext"
                 val file = File(context.getExternalFilesDir(null), fileName)
                 FileOutputStream(file).use { it.write(bytes) }
-                Toast.makeText(context, "Saved: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+
+                (context as? Activity)?.runOnUiThread {
+                    Toast.makeText(context, "Saved: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                }
             } catch (e: Exception) {
-                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                (context as? Activity)?.runOnUiThread {
+                    Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
