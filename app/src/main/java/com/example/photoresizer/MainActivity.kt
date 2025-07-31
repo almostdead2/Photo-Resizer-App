@@ -1,16 +1,18 @@
 package com.photoresizer
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import java.io.File
-import java.io.FileOutputStream
+import java.io.OutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,8 +26,8 @@ class MainActivity : AppCompatActivity() {
 
         with(webView.settings) {
             javaScriptEnabled = true
-            allowFileAccess = true           // Required for local asset/image loading
-            allowContentAccess = true        // Needed for content:// access
+            allowFileAccess = true
+            allowContentAccess = true
             domStorageEnabled = true
             setSupportZoom(false)
             displayZoomControls = false
@@ -54,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true // Block all external links
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
         }
 
         webView.addJavascriptInterface(Saver(this), "AndroidSaver")
@@ -81,11 +83,30 @@ class MainActivity : AppCompatActivity() {
                 val bytes = Base64.decode(base64, Base64.DEFAULT)
                 val ext = if (mimeType == "image/png") "png" else "jpg"
                 val fileName = "resized_${System.currentTimeMillis()}.$ext"
-                val file = File(context.getExternalFilesDir(null), fileName)
-                FileOutputStream(file).use { it.write(bytes) }
 
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, "Saved: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                val resolver = context.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoResizer")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+
+                val uri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    resolver.openOutputStream(uri).use { out: OutputStream? ->
+                        out?.write(bytes)
+                    }
+
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(uri, contentValues, null, null)
+
+                    (context as? Activity)?.runOnUiThread {
+                        Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    throw Exception("Failed to create MediaStore entry.")
                 }
             } catch (e: Exception) {
                 (context as? Activity)?.runOnUiThread {
