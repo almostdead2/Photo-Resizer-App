@@ -458,6 +458,88 @@
             }
         });
 
+        // --- Crop Feature ---
+        const cropButton = document.getElementById('cropButton');
+        let isCropping = false;
+        let cropStartX = 0, cropStartY = 0, cropEndX = 0, cropEndY = 0;
+
+        cropButton.addEventListener('click', () => {
+            if (!originalImage) {
+                message.textContent = "No image to crop.";
+                return;
+            }
+
+            isCropping = true;
+            message.textContent = "Drag on image to crop.";
+
+            const ctx = imageCanvas.getContext('2d');
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'absolute';
+            overlay.style.top = imageCanvas.offsetTop + 'px';
+            overlay.style.left = imageCanvas.offsetLeft + 'px';
+            overlay.style.width = imageCanvas.width + 'px';
+            overlay.style.height = imageCanvas.height + 'px';
+            overlay.style.zIndex = 999;
+            overlay.style.cursor = 'crosshair';
+            document.body.appendChild(overlay);
+
+            const selection = document.createElement('div');
+            selection.style.position = 'absolute';
+            selection.style.border = '2px dashed red';
+            selection.style.pointerEvents = 'none';
+            overlay.appendChild(selection);
+
+            overlay.onmousedown = (e) => {
+                cropStartX = e.offsetX;
+                cropStartY = e.offsetY;
+
+                selection.style.left = cropStartX + 'px';
+                selection.style.top = cropStartY + 'px';
+                selection.style.width = '0px';
+                selection.style.height = '0px';
+
+                overlay.onmousemove = (e2) => {
+                    cropEndX = e2.offsetX;
+                    cropEndY = e2.offsetY;
+
+                    const x = Math.min(cropStartX, cropEndX);
+                    const y = Math.min(cropStartY, cropEndY);
+                    const w = Math.abs(cropEndX - cropStartX);
+                    const h = Math.abs(cropEndY - cropStartY);
+
+                    selection.style.left = x + 'px';
+                    selection.style.top = y + 'px';
+                    selection.style.width = w + 'px';
+                    selection.style.height = h + 'px';
+                };
+
+                overlay.onmouseup = () => {
+                    overlay.onmousemove = null;
+                    overlay.onmouseup = null;
+                    document.body.removeChild(overlay);
+
+                    const cropX = Math.min(cropStartX, cropEndX);
+                    const cropY = Math.min(cropStartY, cropEndY);
+                    const cropW = Math.abs(cropEndX - cropStartX);
+                    const cropH = Math.abs(cropEndY - cropStartY);
+
+                    if (cropW === 0 || cropH === 0) {
+                        message.textContent = "Invalid crop area.";
+                        return;
+                    }
+
+                    const imageData = ctx.getImageData(cropX, cropY, cropW, cropH);
+
+                    imageCanvas.width = cropW;
+                    imageCanvas.height = cropH;
+                    ctx.putImageData(imageData, 0, 0);
+
+                    message.textContent = "Image cropped.";
+                };
+            };
+        });
+        
         // --- Save Button ---
         saveButton.addEventListener('click', () => {
             if (!originalImage || imageCanvas.width === 0 || imageCanvas.height === 0) {
