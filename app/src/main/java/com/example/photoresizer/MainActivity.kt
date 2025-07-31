@@ -5,7 +5,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Base64
@@ -59,7 +58,8 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
         }
 
-        webView.addJavascriptInterface(Saver(this), "AndroidSaver")
+        // Attach JavaScript interface
+        webView.addJavascriptInterface(Saver(this, webView), "AndroidSaver")
 
         webView.loadUrl("file:///android_asset/index.html")
         setContentView(webView)
@@ -75,50 +75,46 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-class Saver(private val context: Context) {
-    @JavascriptInterface
-    fun saveBase64Image(base64Data: String, mimeType: String) {
-        try {
-            val base64 = base64Data.substringAfter("base64,", "")
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
-            val ext = if (mimeType == "image/png") "png" else "jpg"
-            val fileName = "resized_${System.currentTimeMillis()}.$ext"
+    class Saver(private val context: Context, private val webView: WebView) {
+        @JavascriptInterface
+        fun saveBase64Image(base64Data: String, mimeType: String) {
+            try {
+                val base64 = base64Data.substringAfter("base64,", "")
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                val ext = if (mimeType == "image/png") "png" else "jpg"
+                val fileName = "resized_${System.currentTimeMillis()}.$ext"
 
-            val resolver = context.contentResolver
-            val contentValues = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoResizer")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-
-            val uri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri != null) {
-                resolver.openOutputStream(uri).use { out: OutputStream? ->
-                    out?.write(bytes)
+                val resolver = context.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoResizer")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
-                contentValues.clear()
-                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-                resolver.update(uri, contentValues, null, null)
+                val uri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    resolver.openOutputStream(uri).use { out: OutputStream? ->
+                        out?.write(bytes)
+                    }
 
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(uri, contentValues, null, null)
+
+                    (context as? Activity)?.runOnUiThread {
+                        Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
+                        webView.evaluateJavascript("window.onSaveComplete(true);", null) // ✅ Notifies JS success
+                    }
+                } else {
+                    throw Exception("Failed to create MediaStore entry.")
+                }
+            } catch (e: Exception) {
                 (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
-                    // ✅ Notify JS on success
-                    (context as? Activity)?.findViewById<WebView>(android.R.id.content)
-                        ?.evaluateJavascript("window.onSaveComplete(true);", null)
+                    Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                    webView.evaluateJavascript("window.onSaveComplete(false);", null) // ✅ Notifies JS failure
                 }
-            } else {
-                throw Exception("Failed to create MediaStore entry.")
-            }
-        } catch (e: Exception) {
-            (context as? Activity)?.runOnUiThread {
-                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
-                // ✅ Notify JS on failure
-                (context as? Activity)?.findViewById<WebView>(android.R.id.content)
-                    ?.evaluateJavascript("window.onSaveComplete(false);", null)
             }
         }
     }
 }
-
