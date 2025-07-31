@@ -75,44 +75,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    class Saver(private val context: Context) {
-        @JavascriptInterface
-        fun saveBase64Image(base64Data: String, mimeType: String) {
-            try {
-                val base64 = base64Data.substringAfter("base64,", "")
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                val ext = if (mimeType == "image/png") "png" else "jpg"
-                val fileName = "resized_${System.currentTimeMillis()}.$ext"
+class Saver(private val context: Context) {
+    @JavascriptInterface
+    fun saveBase64Image(base64Data: String, mimeType: String) {
+        try {
+            val base64 = base64Data.substringAfter("base64,", "")
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            val ext = if (mimeType == "image/png") "png" else "jpg"
+            val fileName = "resized_${System.currentTimeMillis()}.$ext"
 
-                val resolver = context.contentResolver
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoResizer")
-                    put(MediaStore.Images.Media.IS_PENDING, 1)
+            val resolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoResizer")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+
+            val uri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            if (uri != null) {
+                resolver.openOutputStream(uri).use { out: OutputStream? ->
+                    out?.write(bytes)
                 }
 
-                val uri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                if (uri != null) {
-                    resolver.openOutputStream(uri).use { out: OutputStream? ->
-                        out?.write(bytes)
-                    }
+                contentValues.clear()
+                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(uri, contentValues, null, null)
 
-                    contentValues.clear()
-                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-                    resolver.update(uri, contentValues, null, null)
-
-                    (context as? Activity)?.runOnUiThread {
-                        Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
-                    }
-                } else {
-                    throw Exception("Failed to create MediaStore entry.")
-                }
-            } catch (e: Exception) {
                 (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
+                    // ✅ Notify JS on success
+                    (context as? Activity)?.findViewById<WebView>(android.R.id.content)
+                        ?.evaluateJavascript("window.onSaveComplete(true);", null)
                 }
+            } else {
+                throw Exception("Failed to create MediaStore entry.")
+            }
+        } catch (e: Exception) {
+            (context as? Activity)?.runOnUiThread {
+                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                // ✅ Notify JS on failure
+                (context as? Activity)?.findViewById<WebView>(android.R.id.content)
+                    ?.evaluateJavascript("window.onSaveComplete(false);", null)
             }
         }
     }
 }
+
