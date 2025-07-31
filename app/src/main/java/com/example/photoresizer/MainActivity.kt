@@ -1,4 +1,4 @@
-package com.example.photoresizer
+package com.photoresizer
 
 import android.os.Bundle
 import android.webkit.WebSettings
