@@ -15,49 +15,43 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val webView = WebView(this).apply {
-            settings.apply {
-                javaScriptEnabled = true
-                allowFileAccess = true
-                allowContentAccess = false
-                domStorageEnabled = true
-                cacheMode = WebSettings.LOAD_NO_CACHE
-                setSupportZoom(false)
-                mediaPlaybackRequiresUserGesture = true
-            }
+        val webView = WebView(this)
 
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = false
-            }
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.allowFileAccess = true
+        settings.domStorageEnabled = true
+        settings.allowContentAccess = true
 
-            webChromeClient = object : WebChromeClient() {
-                override fun onShowFileChooser(
-                    view: WebView?,
-                    filePathCallback: ValueCallback<Array<Uri>>,
-                    fileChooserParams: FileChooserParams
-                ): Boolean {
-                    fileChooserCallback?.onReceiveValue(null)
-                    fileChooserCallback = filePathCallback
-                    return try {
-                        val intent = fileChooserParams.createIntent()
-                        startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
-                        true
-                    } catch (e: Exception) {
-                        fileChooserCallback = null
-                        false
-                    }
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
+                fileChooserCallback?.onReceiveValue(null)
+                fileChooserCallback = filePathCallback
+
+                return try {
+                    val intent = fileChooserParams.createIntent()
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
+                    true
+                } catch (e: Exception) {
+                    fileChooserCallback = null
+                    false
                 }
             }
-
-            loadUrl("file:///android_asset/index.html")
         }
 
+        webView.webViewClient = WebViewClient()
+
+        webView.loadUrl("file:///android_asset/index.html")
         setContentView(webView)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-            val result = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+            val result: Array<Uri>? = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
             fileChooserCallback?.onReceiveValue(result)
             fileChooserCallback = null
         } else {
