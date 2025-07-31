@@ -8,7 +8,6 @@ import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
-
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQUEST_CODE = 1
 
@@ -23,7 +22,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
-                webView: WebView?,
+                view: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
@@ -31,13 +30,13 @@ class MainActivity : AppCompatActivity() {
                 fileChooserCallback = filePathCallback
 
                 val intent = fileChooserParams.createIntent()
-                return try {
+                try {
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
-                    true
                 } catch (e: Exception) {
                     fileChooserCallback = null
-                    false
+                    return false
                 }
+                return true
             }
         }
 
@@ -47,15 +46,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-            val result = if (resultCode == Activity.RESULT_OK && data != null) {
-                arrayOf(data.data!!)
-            } else {
-                null
-            }
+            val result: Array<Uri>? = if (resultCode == Activity.RESULT_OK && data != null) {
+                WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+            } else null
+
             fileChooserCallback?.onReceiveValue(result)
             fileChooserCallback = null
-        } else {
-            super.onActivityResult(requestCode, resultCode, data)
+            return
         }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 }
