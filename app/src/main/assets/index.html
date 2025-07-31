@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Resizer</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; text-align: center; background-color: #f4f7f6; color: #333; overflow-x: hidden;}
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; text-align: center; background-color: #f4f7f6; color: #333; overflow-x: hidden; }
         .container { max-width: 800px; margin: 30px auto; padding: 30px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
         h1 { color: #2c3e50; margin-bottom: 25px; }
         input[type="file"] { display: block; width: 100%; max-width: 400px; box-sizing: border-box; margin: 0 auto 20px auto; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #e8f0fe; }
@@ -83,8 +83,7 @@
     <div class="container">
         <h1>Photo Resizer</h1>
         <input type="file" id="imageInput" accept="image/*">
-        <span id="fileNameLabel" style="margin-left: 10px; font-style: italic;">No file chosen</span>
-        
+
         <div class="unit-switch">
             <label>Units:</label>
             <input type="radio" id="unitCm" name="units" value="cm" checked>
@@ -326,7 +325,6 @@
                 message.textContent = 'Error reading file.';
             };
             reader.readAsDataURL(file);
-            fileNameLabel.textContent = file.name;
             event.target.value = '';
         });
 
