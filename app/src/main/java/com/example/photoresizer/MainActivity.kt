@@ -58,7 +58,6 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
         }
 
-        // Attach JavaScript interface
         webView.addJavascriptInterface(Saver(this, webView), "AndroidSaver")
 
         webView.loadUrl("file:///android_asset/index.html")
@@ -104,7 +103,7 @@ class MainActivity : AppCompatActivity() {
 
                     (context as? Activity)?.runOnUiThread {
                         Toast.makeText(context, "Saved to Pictures/PhotoResizer", Toast.LENGTH_LONG).show()
-                        webView.evaluateJavascript("window.onSaveComplete(true);", null) // ✅ Notifies JS success
+                        webView.evaluateJavascript("window.onSaveComplete && window.onSaveComplete()", null)
                     }
                 } else {
                     throw Exception("Failed to create MediaStore entry.")
@@ -112,7 +111,6 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 (context as? Activity)?.runOnUiThread {
                     Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
-                    webView.evaluateJavascript("window.onSaveComplete(false);", null) // ✅ Notifies JS failure
                 }
             }
         }
