@@ -1,11 +1,16 @@
 package com.photoresizer
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.webkit.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,7 +36,6 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 fileChooserCallback?.onReceiveValue(null)
                 fileChooserCallback = filePathCallback
-
                 return try {
                     val intent = fileChooserParams.createIntent()
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
@@ -45,6 +49,9 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = WebViewClient()
 
+        // JS to Android interface for saving images
+        webView.addJavascriptInterface(Saver(this), "AndroidSaver")
+
         webView.loadUrl("file:///android_asset/index.html")
         setContentView(webView)
     }
@@ -56,6 +63,23 @@ class MainActivity : AppCompatActivity() {
             fileChooserCallback = null
         } else {
             super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    class Saver(private val context: Context) {
+        @JavascriptInterface
+        fun saveBase64Image(base64Data: String, mimeType: String) {
+            try {
+                val base64 = base64Data.substringAfter("base64,", "")
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                val ext = if (mimeType == "image/png") "png" else "jpg"
+                val fileName = "resized_${System.currentTimeMillis()}.$ext"
+                val file = File(context.getExternalFilesDir(null), fileName)
+                FileOutputStream(file).use { it.write(bytes) }
+                Toast.makeText(context, "Saved: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
