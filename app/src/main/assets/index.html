@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Resizer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; text-align: center; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 800px; margin: 30px auto; padding: 30px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        h1 { color: #2c3e50; margin-bottom: 25px; }
+        input[type="file"] { display: block; width: 100%; max-width: 400px; box-sizing: border-box; margin: 0 auto 20px auto; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #e8f0fe; }
+        input[type="number"] { padding: 8px 12px; margin: 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; width: 100px; }
+        input[type="range"] { margin: 5px; vertical-align: middle; width: 200px; }
+        label { font-weight: bold; margin-right: 10px; }
+        button { padding: 12px 25px; font-size: 18px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
+        button#resizeButton { background-color: #28a745; color: white; }
+        button#resizeButton:hover { background-color: #218838; transform: translateY(-2px); }
+        button#downloadButton { background-color: #007bff; color: white; display: none; }
+        button#downloadButton:hover { background-color: #0056b3; transform: translateY(-2px); }
+        canvas { border: 2px dashed #a0a0a0; max-width: 100%; height: auto; display: block; margin: 25px auto; background-color: #f9f9f9; }
+        #message { margin-top: 15px; font-weight: bold; color: #555; }
+        .unit-switch { margin-bottom: 15px; }
+        .unit-switch label { margin-right: 5px; }
+        .unit-switch input[type="radio"] { width: auto; margin-left: 10px; margin-right: 3px; }
+        .row { margin: 8px 0; }
+        .slider-label { font-size: 1em; }
+        .output-format-row { margin-bottom: 10px; }
+        #jpegQualityRow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .upscale-switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #upscaleWarnings {
+            max-width: 420px;
+            margin: 0 auto 10px auto;
+            padding: 10px 15px;
+            background: #fff9e5;
+            border-left: 5px solid #ff9800;
+            color: #b45c00;
+            border-radius: 6px;
+            text-align: left;
+            display: none;
+        }
+        #upscaleWarnings ul {
+            margin: 0 0 0 18px;
+            padding: 0;
+            font-size: 0.97em;
+        }
+        #upscaleWarnings li {
+            margin-bottom: 6px;
+        }
+        .upscale-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .upscale-radio-label {
+            font-weight: normal;
+            margin-right: 7px;
+            margin-left: 0;
+        }
+        .aspect-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .aspect-label {
+            font-weight: bold;
+            margin-right: 7px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Photo Resizer</h1>
+        <input type="file" id="imageInput" accept="image/*">
+        
+        <div class="unit-switch">
+            <label>Units:</label>
+            <input type="radio" id="unitCm" name="units" value="cm" checked>
+            <label for="unitCm">cm</label>
+            <input type="radio" id="unitPx" name="units" value="px">
+            <label for="unitPx">px</label>
+        </div>
+        <div class="upscale-switch-row">
+            <span class="upscale-label">Upscale:</span>
+            <input type="radio" id="upscaleYes" name="upscale" value="yes">
+            <label for="upscaleYes" class="upscale-radio-label">Yes</label>
+            <input type="radio" id="upscaleNo" name="upscale" value="no" checked>
+            <label for="upscaleNo" class="upscale-radio-label">No</label>
+        </div>
+        <div id="upscaleWarnings">
+            <ul>
+                <li>Images may become blurry, pixelated, or stretched.</li>
+                <li>File size can increase a lot, but quality will not improve.</li>
+                <li>Upscale is rarely needed for photos; for icons/graphics, use vector images instead.</li>
+            </ul>
+        </div>
+        <div class="aspect-row">
+            <input type="checkbox" id="preserveAspect">
+            <label for="preserveAspect" class="aspect-label">Preserve aspect ratio</label>
+        </div>
+        <p>
+            <label for="widthInput">New Width:</label>
+            <input type="number" id="widthInput" value="800"> <span id="widthUnitLabel">cm</span>
+        </p>
+        <p>
+            <label for="heightInput">New Height:</label>
+            <input type="number" id="heightInput" placeholder="Auto" value=""> <span id="heightUnitLabel">cm</span>
+        </p>
+        <p>
+            <label for="targetSizeInput">Target Size:</label>
+            <input type="number" id="targetSizeInput" placeholder="Leave blank for dimensions" value="" min="1"> KB
+        </p>
+        <p>
+            <label for="dpiInput">DPI (Pixels Per Inch):</label>
+            <input type="number" id="dpiInput" value="300" min="1">
+        </p>
+        <div class="row output-format-row">
+            <label>Output Format:</label>
+            <select id="outputFormat">
+                <option value="jpeg">JPEG</option>
+                <option value="png">PNG (lossless)</option>
+            </select>
+        </div>
+        <div class="row" id="jpegQualityRow">
+            <label class="slider-label" for="jpegQuality">JPEG Quality:</label>
+            <select id="jpegQuality">
+                <!-- Options will be generated by JavaScript -->
+            </select>
+            <span id="jpegQualityValue">1.00</span>
+        </div>
+        <button id="resizeButton">Resize Image</button>
+        <button id="downloadButton">Download Resized Image</button>
+        <div id="output">
+            <canvas id="imageCanvas"></canvas>
+            <p id="message">Select an image to begin.</p>
+        </div>
+    </div>
+    <script>
+        // --- Variables and DOM ---
+        const imageInput = document.getElementById('imageInput');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const resizeButton = document.getElementById('resizeButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const message = document.getElementById('message');
+        const ctx = imageCanvas.getContext('2d');
+        const targetSizeInput = document.getElementById('targetSizeInput');
+        const dpiInput = document.getElementById('dpiInput');
+        const unitCm = document.getElementById('unitCm');
+        const unitPx = document.getElementById('unitPx');
+        const widthUnitLabel = document.getElementById('widthUnitLabel');
+        const heightUnitLabel = document.getElementById('heightUnitLabel');
+        const outputFormat = document.getElementById('outputFormat');
+        const jpegQuality = document.getElementById('jpegQuality');
+        const jpegQualityValue = document.getElementById('jpegQualityValue');
+        const jpegQualityRow = document.getElementById('jpegQualityRow');
+        const upscaleYes = document.getElementById('upscaleYes');
+        const upscaleNo = document.getElementById('upscaleNo');
+        const upscaleWarnings = document.getElementById('upscaleWarnings');
+        const preserveAspect = document.getElementById('preserveAspect');
+        let originalImage = null;
+        let lastOperationQuality = 1.00;
+        let lastOperationDownloadFormat = 'image/jpeg';
+        const CM_PER_INCH = 2.54;
+
+        // --- JPEG Quality Dropdown (0.70 to 1.00, step 0.01, default 1.00) ---
+        function populateJpegQualityOptions() {
+            jpegQuality.innerHTML = "";
+            for (let q = 0.70; q <= 1.001; q += 0.01) {
+                let value = q.toFixed(2);
+                let option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                if (value === "1.00") option.selected = true;
+                jpegQuality.appendChild(option);
+            }
+            jpegQualityValue.textContent = jpegQuality.value;
+        }
+        populateJpegQualityOptions();
+
+        jpegQuality.addEventListener('change', function () {
+            jpegQualityValue.textContent = this.value;
+        });
+
+        // --- Upscale Switch ---
+        function updateUpscaleWarnings() {
+            if (upscaleYes.checked) {
+                upscaleWarnings.style.display = "block";
+            } else {
+                upscaleWarnings.style.display = "none";
+            }
+        }
+        upscaleYes.addEventListener('change', updateUpscaleWarnings);
+        upscaleNo.addEventListener('change', updateUpscaleWarnings);
+        updateUpscaleWarnings();
+
+        // --- Unit Conversion ---
+        const getSelectedUnit = () => document.querySelector('input[name="units"]:checked').value;
+        const convertToPx = (value, dpi, unit) => unit === 'cm' ? (value / CM_PER_INCH) * dpi : value;
+        const convertFromPx = (px, dpi, unit) => unit === 'cm' ? (px / dpi) * CM_PER_INCH : px;
+
+        // --- Output Format Switch ---
+        outputFormat.addEventListener('change', () => {
+            if (outputFormat.value === "jpeg") {
+                jpegQualityRow.style.display = "";
+            } else {
+                jpegQualityRow.style.display = "none";
+            }
+        });
+
+        // --- Unit Switch Event ---
+        document.querySelectorAll('input[name="units"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const selectedUnit = getSelectedUnit();
+                widthUnitLabel.textContent = selectedUnit;
+                heightUnitLabel.textContent = selectedUnit;
+                if (originalImage) {
+                    const currentDPI = parseInt(dpiInput.value) || 300;
+                    const originalWidthPx = originalImage.width;
+                    const originalHeightPx = originalImage.height;
+                    if (selectedUnit === 'cm') {
+                        widthInput.value = convertFromPx(originalWidthPx, currentDPI, 'cm').toFixed(2);
+                        heightInput.value = convertFromPx(originalHeightPx, currentDPI, 'cm').toFixed(2);
+                    } else {
+                        widthInput.value = Math.round(convertFromPx(originalWidthPx, currentDPI, 'px'));
+                        heightInput.value = Math.round(convertFromPx(originalHeightPx, currentDPI, 'px'));
+                    }
+                }
+            });
+        });
+
+        // --- Aspect ratio feature ---
+        let aspectLocked = false;
+        let aspectRatio = 1;
+
+        preserveAspect.addEventListener('change', () => {
+            aspectLocked = preserveAspect.checked;
+            if (aspectLocked && originalImage) {
+                aspectRatio = originalImage.width / originalImage.height;
+            }
+        });
+
+        widthInput.addEventListener('input', function() {
+            if (aspectLocked && originalImage && this.value) {
+                const currentDPI = parseInt(dpiInput.value) || 300;
+                const selectedUnit = getSelectedUnit();
+                let w = parseFloat(this.value);
+                if (!isNaN(w) && w > 0) {
+                    let widthPx = convertToPx(w, currentDPI, selectedUnit);
+                    let heightPx = widthPx / aspectRatio;
+                    let h = convertFromPx(heightPx, currentDPI, selectedUnit);
+                    heightInput.value = selectedUnit === 'cm' ? h.toFixed(2) : Math.round(h);
+                }
+            }
+        });
+
+        heightInput.addEventListener('input', function() {
+            if (aspectLocked && originalImage && this.value) {
+                const currentDPI = parseInt(dpiInput.value) || 300;
+                const selectedUnit = getSelectedUnit();
+                let h = parseFloat(this.value);
+                if (!isNaN(h) && h > 0) {
+                    let heightPx = convertToPx(h, currentDPI, selectedUnit);
+                    let widthPx = heightPx * aspectRatio;
+                    let w = convertFromPx(widthPx, currentDPI, selectedUnit);
+                    widthInput.value = selectedUnit === 'cm' ? w.toFixed(2) : Math.round(w);
+                }
+            }
+        });
+
+        // --- Image Load ---
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                message.textContent = 'No file selected.';
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                message.textContent = 'Please select a valid image file (e.g., JPG, PNG, GIF).';
+                return;
+            }
+            message.textContent = 'Loading image...';
+            downloadButton.style.display = 'none';
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImage = new Image();
+                originalImage.onload = () => {
+                    const currentDPI = parseInt(dpiInput.value) || 300;
+                    const selectedUnit = getSelectedUnit();
+                    const displayWidth = convertFromPx(originalImage.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                    const displayHeight = convertFromPx(originalImage.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                    message.textContent = `Original: ${displayWidth}${selectedUnit} x ${displayHeight}${selectedUnit} (${originalImage.width}x${originalImage.height}px). Set new dimensions and/or target size.`;
+                    widthInput.value = displayWidth;
+                    heightInput.value = displayHeight;
+                    targetSizeInput.value = '';
+                    imageCanvas.width = originalImage.width;
+                    imageCanvas.height = originalImage.height;
+                    ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(originalImage, 0, 0);
+                    if (aspectLocked) {
+                        aspectRatio = originalImage.width / originalImage.height;
+                    }
+                };
+                originalImage.onerror = () => {
+                    message.textContent = 'Could not load image. It might be corrupted or unsupported.';
+                    originalImage = null;
+                };
+                originalImage.src = e.target.result;
+            };
+            reader.onerror = () => {
+                message.textContent = 'Error reading file.';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // --- Resize Button (High Quality, Optionally Allow Upscale) ---
+        resizeButton.addEventListener('click', async () => {
+            if (!originalImage) {
+                message.textContent = 'Please select an image first.';
+                return;
+            }
+
+            const currentDPI = parseInt(dpiInput.value) || 300;
+            if (currentDPI <= 0) {
+                message.textContent = 'DPI must be a positive number.';
+                return;
+            }
+
+            const selectedUnit = getSelectedUnit();
+            let newWidthValue = parseFloat(widthInput.value);
+            let newHeightValue = parseFloat(heightInput.value);
+            const targetKB = parseInt(targetSizeInput.value);
+            let finalWidthPx = originalImage.width;
+            let finalHeightPx = originalImage.height;
+
+            const hasDimensionInput = (!isNaN(newWidthValue) && newWidthValue > 0) || (!isNaN(newHeightValue) && newHeightValue > 0);
+
+            if (hasDimensionInput) {
+                if (!isNaN(newWidthValue) && newWidthValue > 0) {
+                    finalWidthPx = convertToPx(newWidthValue, currentDPI, selectedUnit);
+                    if (aspectLocked) {
+                        finalHeightPx = finalWidthPx / (originalImage.width / originalImage.height);
+                        heightInput.value = selectedUnit === 'cm'
+                            ? convertFromPx(finalHeightPx, currentDPI, selectedUnit).toFixed(2)
+                            : Math.round(convertFromPx(finalHeightPx, currentDPI, selectedUnit));
+                    } else if (isNaN(newHeightValue) || newHeightValue <= 0) {
+                        finalHeightPx = (originalImage.height / originalImage.width) * finalWidthPx;
+                    } else {
+                        finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
+                    }
+                } else if (!isNaN(newHeightValue) && newHeightValue > 0) {
+                    finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
+                    if (aspectLocked) {
+                        finalWidthPx = finalHeightPx * (originalImage.width / originalImage.height);
+                        widthInput.value = selectedUnit === 'cm'
+                            ? convertFromPx(finalWidthPx, currentDPI, selectedUnit).toFixed(2)
+                            : Math.round(convertFromPx(finalWidthPx, currentDPI, selectedUnit));
+                    } else {
+                        finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
+                    }
+                }
+                // --- Prevent Upscale unless allowed ---
+                if (!upscaleYes.checked && (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height)) {
+                    message.textContent = "Enable Upscaling from above by selecting Yes in Upscale section. Upscaling is not allowed by default. Please choose smaller dimensions than the original.";
+                    return;
+                }
+                if (finalWidthPx <= 0 || finalHeightPx <= 0) {
+                    message.textContent = 'Calculated dimensions are invalid. Please check input.';
+                    return;
+                }
+                message.textContent = 'Resizing by dimensions...';
+                await progressiveResize(originalImage, Math.round(finalWidthPx), Math.round(finalHeightPx));
+                const resizedWidthDisplay = convertFromPx(finalWidthPx, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                const resizedHeightDisplay = convertFromPx(finalHeightPx, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                message.textContent = `Image resized to ${resizedWidthDisplay}${selectedUnit} x ${resizedHeightDisplay}${selectedUnit} (${Math.round(finalWidthPx)}x${Math.round(finalHeightPx)}px).`;
+            } else {
+                imageCanvas.width = originalImage.width;
+                imageCanvas.height = originalImage.height;
+                ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(originalImage, 0, 0);
+                const originalWidthDisplay = convertFromPx(originalImage.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                const originalHeightDisplay = convertFromPx(originalImage.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                message.textContent = `Using original dimensions: ${originalWidthDisplay}${selectedUnit} x ${originalHeightDisplay}${selectedUnit} (${originalImage.width}x${originalImage.height}px).`;
+            }
+
+            // --- File Format ---
+            let format = outputFormat.value === "jpeg" ? "image/jpeg" : "image/png";
+            lastOperationDownloadFormat = format;
+            lastOperationQuality = format === "image/jpeg" ? Number(jpegQuality.value) : undefined;
+
+            // --- Target file size (JPEG only) ---
+            if (format === "image/jpeg" && !isNaN(targetKB) && targetKB > 0) {
+                message.textContent += ` Optimizing to ~${targetKB} KB...`;
+                downloadButton.style.display = 'none';
+                const targetBytes = targetKB * 1024;
+                let currentQuality = Number(jpegQuality.value);
+                const MAX_ITERATIONS = 50;
+                let iteration = 0;
+                let lastBlobSize = Infinity;
+                const getCanvasBlob = (quality) => {
+                    return new Promise(resolve => {
+                        imageCanvas.toBlob(blob => {
+                            resolve(blob);
+                        }, 'image/jpeg', quality);
+                    });
+                };
+                while (iteration < MAX_ITERATIONS) {
+                    const blob = await getCanvasBlob(currentQuality);
+                    const currentSize = blob ? blob.size : Infinity;
+                    if (currentSize <= targetBytes || currentQuality <= 0.7) {
+                        const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        message.textContent = `Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
+                        lastOperationQuality = currentQuality;
+                        downloadButton.style.display = 'inline-block';
+                        break;
+                    }
+                    if (currentQuality > 0.71) {
+                        currentQuality -= 0.03;
+                        if (currentQuality < 0.7) currentQuality = 0.7;
+                    } else {
+                        const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        message.textContent = `Could not reach ${targetKB} KB at current dimensions. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
+                        lastOperationQuality = currentQuality;
+                        downloadButton.style.display = 'inline-block';
+                        break;
+                    }
+                    lastBlobSize = currentSize;
+                    iteration++;
+                    if (iteration === MAX_ITERATIONS) {
+                        const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
+                        message.textContent = `Max iterations reached. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
+                        lastOperationQuality = currentQuality;
+                        downloadButton.style.display = 'inline-block';
+                    }
+                }
+            } else {
+                downloadButton.style.display = 'inline-block';
+            }
+        });
+
+        // --- Download Button ---
+        downloadButton.addEventListener('click', () => {
+            if (!originalImage || imageCanvas.width === 0 || imageCanvas.height === 0) {
+                message.textContent = 'No resized image to download.';
+                return;
+            }
+            imageCanvas.toBlob((blob) => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `resized_image.${lastOperationDownloadFormat.split('/')[1]}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    message.textContent = 'Image downloaded!';
+                } else {
+                    message.textContent = 'Failed to generate image for download.';
+                }
+            }, lastOperationDownloadFormat, lastOperationQuality);
+        });
+
+        // --- Progressive Resize Function (Best Quality) ---
+        async function progressiveResize(img, targetW, targetH) {
+            let tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = img.width;
+            tmpCanvas.height = img.height;
+            let tmpCtx = tmpCanvas.getContext('2d');
+            tmpCtx.imageSmoothingEnabled = true;
+            tmpCtx.imageSmoothingQuality = 'high';
+            tmpCtx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+            tmpCtx.drawImage(img, 0, 0);
+
+            // Downscale in 60% steps for even sharper details
+            let curW = img.width, curH = img.height;
+            while (curW * 0.6 > targetW && curH * 0.6 > targetH) {
+                curW = Math.max(targetW, Math.floor(curW * 0.6));
+                curH = Math.max(targetH, Math.floor(curH * 0.6));
+                let newCanvas = document.createElement('canvas');
+                newCanvas.width = curW;
+                newCanvas.height = curH;
+                let newCtx = newCanvas.getContext('2d');
+                newCtx.imageSmoothingEnabled = true;
+                newCtx.imageSmoothingQuality = 'high';
+                newCtx.clearRect(0, 0, curW, curH);
+                newCtx.drawImage(tmpCanvas, 0, 0, curW, curH);
+                tmpCanvas = newCanvas;
+            }
+            imageCanvas.width = targetW;
+            imageCanvas.height = targetH;
+            ctx.clearRect(0, 0, targetW, targetH);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(tmpCanvas, 0, 0, targetW, targetH);
+        }
+    </script>
+</body>
+</html>
