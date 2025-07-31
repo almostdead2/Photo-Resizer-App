@@ -292,7 +292,7 @@
                 return;
             }
             message.textContent = 'Loading image...';
-            downloadButton.style.display = 'none';
+            saveButton.style.display = 'none';
             const reader = new FileReader();
             reader.onload = (e) => {
                 originalImage = new Image();
@@ -407,7 +407,7 @@
             // --- Target file size (JPEG only) ---
             if (format === "image/jpeg" && !isNaN(targetKB) && targetKB > 0) {
                 message.textContent += ` Optimizing to ~${targetKB} KB...`;
-                downloadButton.style.display = 'none';
+                saveButton.style.display = 'none';
                 const targetBytes = targetKB * 1024;
                 let currentQuality = Number(jpegQuality.value);
                 const MAX_ITERATIONS = 50;
