@@ -325,6 +325,7 @@
                 message.textContent = 'Error reading file.';
             };
             reader.readAsDataURL(file);
+            event.target.value = '';
         });
 
         // --- Resize Button (High Quality, Optionally Allow Upscale) ---
