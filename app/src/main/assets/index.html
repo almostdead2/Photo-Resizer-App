@@ -457,27 +457,20 @@
             }
         });
 
-        // --- Download Button ---
-        downloadButton.addEventListener('click', () => {
+        // --- Save Button ---
+        saveButton.addEventListener('click', () => {
             if (!originalImage || imageCanvas.width === 0 || imageCanvas.height === 0) {
-                message.textContent = 'No resized image to download.';
+                message.textContent = 'No resized image to save.';
                 return;
             }
-            imageCanvas.toBlob((blob) => {
-                if (blob) {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `resized_image.${lastOperationDownloadFormat.split('/')[1]}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    message.textContent = 'Image downloaded!';
-                } else {
-                    message.textContent = 'Failed to generate image for download.';
-                }
-            }, lastOperationDownloadFormat, lastOperationQuality);
+
+            try {
+                const dataUrl = imageCanvas.toDataURL(lastOperationDownloadFormat, lastOperationQuality);
+                AndroidSaver.saveBase64Image(dataUrl, lastOperationDownloadFormat);
+                message.textContent = 'Saving image...';
+            } catch (e) {
+                message.textContent = 'Failed to save image.';
+            }
         });
 
         // --- Progressive Resize Function (Best Quality) ---
