@@ -428,7 +428,7 @@
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         message.textContent = `Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                         lastOperationQuality = currentQuality;
-                        downloadButton.style.display = 'inline-block';
+                        saveButton.style.display = 'inline-block';
                         break;
                     }
                     if (currentQuality > 0.71) {
@@ -439,7 +439,7 @@
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         message.textContent = `Could not reach ${targetKB} KB at current dimensions. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                         lastOperationQuality = currentQuality;
-                        downloadButton.style.display = 'inline-block';
+                        saveButton.style.display = 'inline-block';
                         break;
                     }
                     lastBlobSize = currentSize;
@@ -449,11 +449,11 @@
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         message.textContent = `Max iterations reached. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                         lastOperationQuality = currentQuality;
-                        downloadButton.style.display = 'inline-block';
+                        saveButton.style.display = 'inline-block';
                     }
                 }
             } else {
-                downloadButton.style.display = 'inline-block';
+                saveButton.style.display = 'inline-block';
             }
         });
 
