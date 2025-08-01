@@ -2,7 +2,8 @@
 
     <application
         android:label="Photo Resizer"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        android:icon="@mipmap/ic_launcher">
         
         <activity android:name="com.photoresizer.MainActivity"
             android:exported="true">
